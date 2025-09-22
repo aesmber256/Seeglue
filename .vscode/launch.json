@@ -16,6 +16,7 @@
                 "run",
                 "--unstable",
                 "--inspect-wait",
+                "--unstable-raw-imports",
                 "--allow-all",
             ],
             "attachSimplePort": 9229
