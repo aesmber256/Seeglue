@@ -72,9 +72,6 @@ if (import.meta.main) {
     throw new TypeError("Deno.stat does not support mtime");
   }
 
-  // Load the build file
-  const module: { default: Seeglue.BuildFunc } = await import(toFileUrl(buildFile).toString());
-
   // Create the build environment object
   const buildEnv: Seeglue.BuildEnv = {
     projectRoot: root,
@@ -95,6 +92,9 @@ if (import.meta.main) {
     glob: glob.bind({}, root),
     globFiles: globFiles.bind({}, root)
   };
+
+  // Load the build file
+  const module: { default: Seeglue.BuildFunc } = await import(toFileUrl(buildFile).toString());
 
   // Run the build script
   await module.default(buildEnv);
@@ -160,7 +160,8 @@ if (import.meta.main) {
         file.file,
         ...args,
         "-o",
-        output
+        output,
+        "-fdiagnostics-color=always"
        ]
     });
 
