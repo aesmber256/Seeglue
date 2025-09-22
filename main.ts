@@ -1,5 +1,6 @@
-import { resolve, toFileUrl, dirname, common, relative, join, parse } from "@std/path";
-import { expandGlob, ensureDir, exists } from "@std/fs";
+import { resolve, toFileUrl, dirname, common, relative, isAbsolute } from "@std/path";
+import { expandGlob, ensureDir, exists, ensureFile } from "@std/fs";
+import { stat } from "./fs_util.ts";
 
 async function* glob(root: string, path: string): AsyncIterableIterator<Seeglue.GlobResult> {
   for await (const element of expandGlob(path, { globstar: true, root: root })) {
@@ -17,21 +18,48 @@ async function readJson<T>(path: string | URL): Promise<T> {
   return (await import(path.toString(), { with: { type: "json" } })).default as T;
 }
 
+function fatal(...args: unknown[]) {
+  console.error(...args);
+  Deno.exit(1);
+}
+
 type ObjectCache = Record<string, number>;
 
 if (import.meta.main) {
-  const fileName = resolve(Deno.cwd(), Deno.args.length > 0
+  // Find the meta directory
+  const metaRoot = resolve(Deno.cwd(), Deno.args.length > 0
     ? Deno.args[0]
-    : "seeglue.ts");
-  const root = dirname(fileName);
+    : ".seeglue");
+
+  // Get the project root
+  const root = dirname(metaRoot);
+  // Get the build/cache directory
+  const metaBuild = resolve(metaRoot, "build");
+  // Get the build script
+  const buildFile = resolve(metaRoot, "build.ts");
+
+  // Check if build file exists (and by extension, .seeglue)
+  const buildFileStat = await stat(buildFile);
+  if (buildFileStat === null) {
+    fatal("Build file does not exist", buildFile);
+  }
+  if (!buildFileStat!.isFile) {
+    fatal("Build file is not a file", buildFile);
+  }
+
+
+  // Ensure they actually exist
+  await Promise.all([
+    //ensureDir(metaRoot),
+    ensureDir(metaBuild)
+  ]);
+
+  // Change cwd to possibly prevent user error
   Deno.chdir(root);
 
-  const metaRoot = resolve(root, ".seeglue");
-  const metaBuild = resolve(metaRoot, "build");
-  await ensureDir(metaRoot);
-  await ensureDir(metaBuild);
-
-  const objCacheUrl = toFileUrl(resolve(metaRoot, "objCache.json"));
+  // TODO: Refactor this abomination
+  // Get the object cache as a dict
+  const objCacheUrl = toFileUrl(resolve(metaRoot, "cache.json"));
   let objCache: ObjectCache;
   if (await exists(objCacheUrl)) {
     objCache = await readJson(objCacheUrl);
@@ -44,18 +72,22 @@ if (import.meta.main) {
     throw new TypeError("Deno.stat does not support mtime");
   }
 
-  const module: { default: Seeglue.BuildFunc } = await import(toFileUrl(fileName).toString());
+  // Load the build file
+  const module: { default: Seeglue.BuildFunc } = await import(toFileUrl(buildFile).toString());
 
+  // Create the build environment object
   const buildEnv: Seeglue.BuildEnv = {
     projectRoot: root,
+
+    standard: "c11",
     
     compile: {
-      flags: {},
+      flags: { args: [], override: Object.create(null) },
       srcFiles: new Set()
     },
 
     link: {
-      flags: {},
+      flags: { args: [] },
       incFolders: new Set(),
       libFiles: new Set()
     },
@@ -64,22 +96,113 @@ if (import.meta.main) {
     globFiles: globFiles.bind({}, root)
   };
 
+  // Run the build script
   await module.default(buildEnv);
 
-  // TODO: Parallelize?
-  const freshFiles: { file: string, cachePath: string, mtime: number}[] = [];
-  for (const file of buildEnv.compile.srcFiles) {
-    const parsed = parse(relative(common([root, file]), file));
-    const cachePath = join(parsed.dir, parsed.name).replaceAll("\\", "/");
-    const mtime = (await Deno.stat(file)).mtime!.getTime();
+  // Ensure compiler exists
+  buildEnv.compiler ||= Deno.env.get("CC");
+  if (!buildEnv.compiler) {
+    fatal("No compiler speicified, and $CC is not set");
+  }
 
-    if (!(cachePath in objCache) || mtime > objCache[cachePath])
-    {
+  // Convert to absolute paths
+  const convertedOverrides = Object.create(null);
+  for (const [key, value] of Object.entries(buildEnv.compile.flags.override)) {
+    convertedOverrides[isAbsolute(key) ? key : resolve(root, key)] = value;
+  }
+  buildEnv.compile.flags.override = convertedOverrides;
+
+  // TODO: Parallelize?
+  // Find files that require compilation to objects
+  const freshFiles: { file: string, cachePath: string, mtime: number}[] = [];
+  const notFound: string[] = [];
+  const updatedObjCache: ObjectCache = Object.create(null); 
+  for (const file of buildEnv.compile.srcFiles) {
+    const cachePath = relative(common([root, file]), file).replaceAll("\\", "/");
+    const fileStat = await stat(file);
+
+    if (fileStat === null) {
+      notFound.push(file);
+      continue;
+    }
+
+    const mtime = fileStat!.mtime!.getTime();
+    if (!(cachePath in objCache) || mtime > objCache[cachePath]) {
       freshFiles.push({ file: file, cachePath: cachePath, mtime: mtime });
+    }
+    else {
+      updatedObjCache[cachePath] = mtime;
     }
   }
 
-  console.log(freshFiles);
+  if (notFound.length !== 0) {
+    console.group("Following files were not found");
+    for (const file of notFound) {  
+      console.error(file)
+    }
+    console.groupEnd();
+    fatal("*** Compilation failed! ***");
+  }
 
-  console.log(buildEnv);
+  // Compile the source files
+  const compileFlags = [
+    `-std=${buildEnv.standard}`,
+    ...buildEnv.compile.flags.args
+  ];
+
+  const jobs: Promise<Deno.CommandOutput>[] = [];
+  for (const file of freshFiles) {
+    const args = buildEnv.compile.flags.override[file.file] || compileFlags;
+    const output = resolve(metaBuild, file.cachePath + ".o");
+    const command = new Deno.Command(buildEnv.compiler!, { 
+       args: [
+        "-c",
+        file.file,
+        ...args,
+        "-o",
+        output
+       ]
+    });
+
+    jobs.push(ensureFile(output).then(() => command.output()));
+  }
+
+  const compileResults = await Promise.all(jobs);
+  let compileFailed = false;
+  const decoder = new TextDecoder('utf-8');
+  for (let i = 0; i < compileResults.length; i++) {
+    const result = compileResults[i];
+    const source = freshFiles[i];
+
+    if (!result.success) {
+      compileFailed = true;
+    }
+
+    console.groupCollapsed(`[%c${result.success ? '✓' : 'X'}%c] Compiling file... ${source.cachePath}`,
+        `color: #${result.success ? "00FF00" : "FF0000"}`,
+        "color: initial");      
+      
+      if (result.stdout.length !== 0) {
+        console.groupCollapsed("Stdout");
+        console.log(decoder.decode(result.stdout));
+        console.groupEnd();
+      }
+      
+      if (result.stderr.length !== 0) {
+        console.groupCollapsed("Stderr");
+        console.error(decoder.decode(result.stderr));
+        console.groupEnd();
+      }
+    console.groupEnd();
+    
+    if (!result.success)
+      continue;
+
+    updatedObjCache[source.cachePath] = source.mtime;
+  }
+  await Deno.writeTextFile(objCacheUrl, JSON.stringify(updatedObjCache));
+
+  if (compileFailed) {
+    fatal("*** Compilation failed! ***");
+  }
 }

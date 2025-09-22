@@ -12,20 +12,14 @@ declare namespace Seeglue {
     isDir: boolean
   }
 
-
-  type BuildFlags = {
-    standard?: CStandardEnum;
-    compiler?: CCEnum;
-  }
-
   type CompileEnv = {
     readonly srcFiles: Set<string>;
     readonly flags: CompileFlags;
   }
 
   type CompileFlags = {
-    args?: string[];
-    override?: Record<string, CompileFlags>;
+    args: string[];
+    override: Record<string, string[]>;
   }
 
   type LinkEnv = {
@@ -35,14 +29,13 @@ declare namespace Seeglue {
   }
 
   type LinkFlags = {
-    args?: string[];
-    override?: Record<string, LinkFlags>;
+    args: string[];
   }
 
   type BuildEnv = {
     readonly projectRoot: string;
     
-    standard?: CStandardEnum;
+    standard: CStandardEnum;
     compiler?: CCEnum;
 
     readonly compile: CompileEnv;

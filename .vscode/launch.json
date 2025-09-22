@@ -11,7 +11,7 @@
             "program": "${workspaceFolder}/main.ts",
             "cwd": "${workspaceFolder}/test_project",
             "env": {},
-            "runtimeExecutable": "E:\\Tools\\Deno\\bin\\deno.EXE",
+            "runtimeExecutable": "deno",
             "runtimeArgs": [
                 "run",
                 "--unstable",
