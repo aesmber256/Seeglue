@@ -120,14 +120,18 @@ if (import.meta.main) {
       notFound.push(file);
       continue;
     }
-    
+
+    // Get the last modified timestamp in unix
     const mtime = fileStat!.mtime!.getTime();
-    if (!(cachePath in objCache) || mtime > objCache[cachePath]) {
-      freshFiles.push({ file: file, cachePath: cachePath, mtime: mtime });
-    }
-    else {
+
+    // File is in cache and up to date, keep it
+    if (cachePath in objCache && mtime <= objCache[cachePath]) {
       updatedObjCache[cachePath] = mtime;
+      continue;
     }
+
+    // Add to files needing compilation
+    freshFiles.push({ file: file, cachePath: cachePath, mtime: mtime });  
   }
   
   // Check if all files exist
