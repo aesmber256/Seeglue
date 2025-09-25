@@ -1,9 +1,16 @@
 export default async function(b: Seeglue.BuildEnv) {
-    b.compiler = "clang";
+    b.compiler = "gcc";
     b.standard = "c11";
-    b.output = "app";
+    b.output = "out.exe";
+    b.outputKind = "app";
+
+    const unit: Seeglue.CompileUnit = {
+        input: new Set()
+    };
 
     for await (const file of b.globFiles("src/**/*.c")) {
-        b.compile.srcFiles.add(file);
+        unit.input.add(file);
     }
+
+    b.compile.units.add(unit);
 };

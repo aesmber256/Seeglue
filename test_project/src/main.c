@@ -1,5 +1,8 @@
-int addw(int, int);
+#include <stdio.h>
 
-int main() {
-    return add(1, 2);
+int add(int, int);
+
+int main(void) {
+    printf("%i\n", add(1, 2));
+    return 0;
 }

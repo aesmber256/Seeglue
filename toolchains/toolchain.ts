@@ -7,12 +7,23 @@ export type SourceFileEntry = {
     mtime: number;
 }
 
-export type Toolchain = {
-    compileFile(tree: DirTree, env: Seeglue.BuildEnv, file: SourceFileEntry): Promise<Deno.CommandOutput>;
-    link(tree: DirTree, env: Seeglue.BuildEnv, objects: string[]): Promise<Deno.CommandOutput>;
+export type CompileOutput = {
+    shell: Deno.CommandOutput;
+    source: string;
+    output: string;
 }
 
-export function custom(compilerPath: string): Toolchain {
+export type LinkOutput = {
+    shell: Deno.CommandOutput;
+    output: string;
+}
+
+export type Toolchain = {
+    compile(tree: DirTree, env: Seeglue.BuildEnv, input: SourceFileEntry[], unit: Seeglue.CompileUnit): Promise<Map<SourceFileEntry, CompileOutput>>;
+    link(tree: DirTree, env: Seeglue.BuildEnv, input: string[]): Promise<LinkOutput>;
+}
+
+export function custom(_compilerPath: string): Toolchain {
     throw new TypeError("Not impl");
 }
 
