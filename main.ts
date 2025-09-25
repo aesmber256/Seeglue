@@ -1,15 +1,10 @@
-import { resolve, toFileUrl, dirname, common, relative } from "@std/path";
+import { resolve, toFileUrl, dirname, common, relative, join } from "@std/path";
 import { ensureDir, exists } from "@std/fs";
-import { stat } from "./fs_util.ts";
+import { readJsonOrCreate, stat } from "./fs_util.ts";
 import { glob, globFiles, shell } from "./lib_funcs.ts";
 import { CLANG, CompileOutput, custom as customToolchain, GCC, SourceFileEntry, Toolchain } from "./toolchains/toolchain.ts";
 import { ERROR, HEADER, RESET, SUCCESS, WHITE } from "./colors.ts";
-
-
-
-async function readJson<T>(path: string | URL): Promise<T> {
-    return (await import(path.toString(), { with: { type: "json" } })).default as T;
-}
+import { parseCli } from "./cli_util.ts";
 
 export function fatal(...args: unknown[]) {
     console.error(...args);
@@ -45,13 +40,17 @@ export type DirTree = {
 
 
 if (import.meta.main) {
-    // Find the meta directory
-    const metaRoot = resolve(Deno.cwd(), Deno.args.length > 0 ? Deno.args[0] : ".seeglue");
-    
+    const params = parseCli();
+
     // Get the project root
-    const root = dirname(metaRoot);
+    const root = resolve(Deno.cwd(), params.root);
+
+    // Get the meta directory
+    const metaRoot = join(root, ".seeglue");
+    
     // Get the build/cache directory
     const buildFolder = resolve(metaRoot, "build");
+    
     // Get the build script
     const buildFile = resolve(metaRoot, "build.ts");
     
@@ -73,19 +72,10 @@ if (import.meta.main) {
     // Change cwd to possibly prevent user error
     Deno.chdir(root);
     
-    // TODO: Refactor this abomination
-    // Get the object cache as a dict
+    // Make the cache
     const cacheFile = resolve(metaRoot, "cache.json");
     const cacheFileUrl = toFileUrl(cacheFile);
-    let globalCache: GlobalCache;
-    // Todo: race condition, see fs_util.ts stat(string)
-    if (await exists(cacheFileUrl)) {
-        globalCache = await readJson(cacheFileUrl);
-    }
-    else {
-        globalCache = { object: Object.create(null), custom: Object.create(null) };
-        await Deno.writeTextFile(cacheFileUrl, JSON.stringify(globalCache));
-    }
+    const globalCache = await readJsonOrCreate<GlobalCache>(cacheFileUrl, { object: Object.create(null), custom: Object.create(null) });
     const objCache = globalCache.object;
     
     // Check if deno supports mtime, since allegedly it might not always

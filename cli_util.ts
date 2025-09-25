@@ -1,50 +1,65 @@
 import { resolve, dirname } from "@std/path";
+import { fatal } from "./main.ts";
+import { parseArgs } from "@std/cli/parse-args";
 
-export type CliAction = "init" | "build" | "clean";
+export type CliAction = "init" | "build" | "clean" | "gen_clangd";
+export type CliVerbosity = "quiet" | "normal" | "verbose";
 
 export type CliArgs = {
     action: CliAction,
-    root: string
-}
+    root: string,
+    verbose: CliVerbosity,
+    dryRun: boolean,
+};
 
-export function parseCli(): CliArgs | string {
-    
+export function parseCli(): CliArgs {
     if (Deno.args.length === 0)
-        return { action: "build", root: Deno.cwd()}
+        return { action: "build", root: Deno.cwd(), verbose: "normal", dryRun: false }
     
-    let action: string;
+    let action: CliAction;
     switch (Deno.args[0]) {
         case "init":
         case "i":
-        action = "init";
-        break
+            action = "init";
+            break;
         
         case "build":
         case "b":
-        action = "build";
-        break;
+            action = "build";
+            break;
         
         case "clean":
         case "c":
-        action = "clean";
-        break
+            action = "clean";
+            break;
+        
+        case "clangd":
+            action = "gen_clangd";
+            break;
         
         default:
-        return null;
+            fatal("Unrecognized subcommand", Deno.args[0]);
+            break;
     }
-}
 
-export function getProjectRoot(): string | null {
-    switch (Deno.args) {
-        case value:
-        
-        break;
-        
-        default:
-        break;
-    }
+    const args = parseArgs(Deno.args.slice(1), {
+        boolean: ["verbose", "quiet", "dry-run"],
+        alias: { v: "verbose", q: "quiet" },
+    });
     
-    const metaRoot = resolve(Deno.cwd(), Deno.args.length > 0
-    ? Deno.args[0]
-    : ".seeglue");
+    // Enforce mutual exclusion
+    if (args.verbose && args.quiet) {
+        fatal("Can't use --quiet and --verbose together");
+    }
+
+    return {
+        action: action!,
+        root: args._[0].toString() ?? Deno.cwd(),
+        verbose: args.verbose
+            ? "verbose"
+            : args.quiet
+                ? "quiet"
+                : "normal",
+        dryRun: args["dry-run"]
+    };
 }
