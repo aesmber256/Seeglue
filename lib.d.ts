@@ -1,8 +1,10 @@
 declare namespace Seeglue {
   // deno-lint-ignore ban-types
   type CStandardEnum = 'c89' | 'c90' | 'c99' | 'c11' | 'c17' | 'c18' | 'c23' | (`c${string}` & {});
-  // deno-lint-ignore ban-types
-  type CCEnum = 'gcc' | 'clang' | 'msvc' | (string & {});
+  //w deno-lint-ignore ban-types
+  type CCEnum = "gcc" | "clang"| "custom";// | 'msvc' | (string & {});
+
+  type OutputType = "app" | "lib" | "custom";
 
   type ProcSignal = 
     | "SIGABRT" | "SIGALRM" | "SIGBREAK"  | "SIGBUS"    | "SIGCHLD" | "SIGCONT"
@@ -39,7 +41,7 @@ declare namespace Seeglue {
   }
 
   type LinkEnv = {
-    readonly incFolders: Set<string>;
+    readonly libFolders: Set<string>;
     readonly libFiles: Set<string>;
     readonly flags: LinkFlags;
   }
@@ -52,8 +54,13 @@ declare namespace Seeglue {
     readonly projectRoot: string;
     
     standard: CStandardEnum;
+    
     compiler?: CCEnum;
+    compilerPath?: string;
 
+    output?: OutputType;
+
+    readonly incPath: Set<string>;
     readonly compile: CompileEnv;
     readonly link: LinkEnv;
 

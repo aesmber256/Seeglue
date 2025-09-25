@@ -1,20 +1,42 @@
 import { resolve, toFileUrl, dirname, common, relative, isAbsolute } from "@std/path";
-import { ensureDir, exists, ensureFile } from "@std/fs";
+import { ensureDir, exists } from "@std/fs";
 import { stat } from "./fs_util.ts";
 import { glob, globFiles, shell } from "./lib_funcs.ts";
+import { CLANG, custom as customToolchain, GCC, Toolchain } from "./toolchains/toolchain.ts";
 
-import LIB_EMBED from "./lib.d.ts" with { type: "text" };
+
 
 async function readJson<T>(path: string | URL): Promise<T> {
   return (await import(path.toString(), { with: { type: "json" } })).default as T;
 }
 
-function fatal(...args: unknown[]) {
+export function fatal(...args: unknown[]) {
   console.error(...args);
   Deno.exit(1);
 }
 
-type ObjectCache = Record<string, number>;
+export function compileFatal() {
+  fatal("*** %cCompilation failed!%c ***", "color: #d43c3c", "color: initial");
+}
+
+export type ObjectCache = Record<string, number>;
+export type DirTree = {
+  // The project root
+  readonly root: string,
+
+  // The .seeglue folder
+  readonly metaRoot: string,
+
+  // The build folder containing object files
+  readonly buildFolder: string,
+
+  // The build.ts script file
+  readonly buildFile: string,
+
+  // The object cache, cache.json, file
+  readonly cacheFile: string
+}
+
 
 if (import.meta.main) {
   // Find the meta directory
@@ -26,7 +48,7 @@ if (import.meta.main) {
   // Get the project root
   const root = dirname(metaRoot);
   // Get the build/cache directory
-  const metaBuild = resolve(metaRoot, "build");
+  const buildFolder = resolve(metaRoot, "build");
   // Get the build script
   const buildFile = resolve(metaRoot, "build.ts");
   
@@ -42,7 +64,7 @@ if (import.meta.main) {
   // Ensure they actually exist
   await Promise.all([
     //ensureDir(metaRoot),
-    ensureDir(metaBuild)
+    ensureDir(buildFolder)
   ]);
   
   // Change cwd to possibly prevent user error
@@ -50,8 +72,10 @@ if (import.meta.main) {
   
   // TODO: Refactor this abomination
   // Get the object cache as a dict
-  const objCacheUrl = toFileUrl(resolve(metaRoot, "cache.json"));
+  const cacheFile = resolve(metaRoot, "cache.json");
+  const objCacheUrl = toFileUrl(cacheFile);
   let objCache: ObjectCache;
+  // Todo: race condition, see fs_util.ts stat(string)
   if (await exists(objCacheUrl)) {
     objCache = await readJson(objCacheUrl);
   }
@@ -59,15 +83,26 @@ if (import.meta.main) {
     await Deno.writeTextFile(objCacheUrl, "{}");
     objCache = {};
   }
+
+  // Check if deno supports mtime, since allegedly it might not always
   if (!(await Deno.stat(objCacheUrl)).mtime) {
     throw new TypeError("Deno.stat does not support mtime");
+  }
+
+  // The pro
+  const tree: DirTree = {
+    root: root,
+    metaRoot: metaRoot,
+    buildFile: buildFile,
+    cacheFile: cacheFile,
+    buildFolder: buildFolder
   }
   
   // Create the build environment object
   const buildEnv: Seeglue.BuildEnv = {
     projectRoot: root,
-    
     standard: "c11",
+    incPath: new Set(),
     
     compile: {
       flags: { args: [], override: Object.create(null) },
@@ -76,7 +111,7 @@ if (import.meta.main) {
     
     link: {
       flags: { args: [] },
-      incFolders: new Set(),
+      libFolders: new Set(),
       libFiles: new Set()
     },
     
@@ -89,15 +124,46 @@ if (import.meta.main) {
   const module: { default: Seeglue.BuildFunc } = await import(toFileUrl(buildFile).toString());
   
   // Run the build script
-  console.group("--- %cRunning build script%c ---", "color: rgba(44, 209, 209, 1)", "color: initial")
+  console.group("*** %cRunning build script%c ***", "color: rgba(44, 209, 154, 1)", "color: initial")
   await module.default(buildEnv);
   console.groupEnd();
   console.log();
   
   // Ensure compiler exists
-  buildEnv.compiler ||= Deno.env.get("CC");
-  if (!buildEnv.compiler) {
-    fatal("No compiler speicified, and $CC is not set");
+  if (!buildEnv.compiler || (buildEnv.compiler === "custom" && !await exists(buildEnv.compilerPath ?? "", { isFile: true }))) {
+    fatal("No compiler/path specified");
+  }
+
+  let toolchain: Toolchain = null!;
+  switch (buildEnv.compiler) {
+    case "gcc":
+      toolchain = GCC;
+      break;
+
+    case "clang":
+      toolchain = CLANG;
+      break;
+
+    case "custom":
+      if (!buildEnv.compilerPath)
+        fatal("No compiler path specified");
+
+      toolchain = customToolchain(buildEnv.compilerPath!);
+      break;
+
+    case null:
+    case undefined:
+      fatal("No compiler specified");
+      break;
+
+    default:
+      fatal("Unknown compiler specified");
+      break;
+  }
+
+  // Ensure output type
+  if (!buildEnv.output) {
+    fatal("No output type specified");
   }
   
   // Convert to absolute paths
@@ -141,43 +207,14 @@ if (import.meta.main) {
       console.error(file)
     }
     console.groupEnd();
-    fatal("*** Compilation failed! ***");
+    compileFatal()
   }
-  
-  // Compile the source files
-  const compileFlags = [
-    `-std=${buildEnv.standard}`,
-    ...buildEnv.compile.flags.args
-  ];
 
-  let colorFlag = "";
-  // If known compiler, enable color output
-  switch (buildEnv.compiler) {
-    case "gcc":
-      colorFlag = "-fdiagnostics-color=always";
-      break;
-
-    case "clang":
-      colorFlag = "-fdiagnostics-color";
-      break;
-  }
-  
   // Compile the source files
+  console.group("*** %cRunning compiler%c ***", "color: rgba(44, 209, 154, 1)", "color: initial");
   const jobs: Promise<Deno.CommandOutput>[] = [];
   for (const file of freshFiles) {
-    const args = buildEnv.compile.flags.override[file.file] || compileFlags;
-    const output = resolve(metaBuild, file.cachePath + ".o");
-
-    const command = new Deno.Command(buildEnv.compiler!, { 
-      args: [
-        "-c", file.file,
-        ...args,
-        "-o", output,
-        colorFlag
-      ]
-    });
-    
-    jobs.push(ensureFile(output).then(() => command.output()));
+    jobs.push(toolchain.compileFile(tree, buildEnv, file));
   }
   
   // Print output from compilation
@@ -197,14 +234,16 @@ if (import.meta.main) {
       `color: #${result.success ? "00FF00" : "FF0000"}`,
       "color: initial"
     ); {
+      // Print stdout if any data
       if (result.stdout.length !== 0) {
-        console.groupCollapsed("Stdout");
+        console.groupCollapsed("%cout%c:", "color: #FFFFFF", "color: initial");
         console.log(decoder.decode(result.stdout));
         console.groupEnd();
       }
       
+      // Print stderr if any data
       if (result.stderr.length !== 0) {
-        console.groupCollapsed("Stderr");
+        console.groupCollapsed("%cerr%c:", "color: #ff0000", "color:initial");
         console.error(decoder.decode(result.stderr));
         console.groupEnd();
       }
@@ -217,12 +256,29 @@ if (import.meta.main) {
     // Update the cache
     updatedObjCache[source.cachePath] = source.mtime;
   }
+  console.groupEnd();
+
+  // Overwrite old cache
   await Deno.writeTextFile(objCacheUrl, JSON.stringify(updatedObjCache));
   
   // Oof.
   if (compileFailed) {
-    fatal("*** Compilation failed! ***");
+    compileFatal();
   }
 
+  // === Link it ===
+  let linkFlags;
+  switch (buildEnv.output) {
+    case "app":
+      linkFlags
+      break;
 
+    case "lib":
+
+      break;
+
+    default:
+      fatal("Invalid output type specified");
+      break;
+  }
 }
