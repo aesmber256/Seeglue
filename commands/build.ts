@@ -136,7 +136,7 @@ export async function invokeBuildFunction(scriptFile: string, func: BuildFunctio
 }
 
 export default async function(args: CliArgs) {
-    const tree = createTree(args.root);
+    const tree = createTree(args.projectRoot);
     const { root, buildFile, buildFolder, cacheFile } = tree;
     
     // Check if build file exists (and by extension, .seeglue)

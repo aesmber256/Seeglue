@@ -10,7 +10,7 @@ import lib from "../resource/seeglue.d.ts" with { type: "text" };
 import buildFile from "../resource/build.txt" with { type: "text" };
 
 export default async function(args: CliArgs) {
-    const tree = createTree(args.root);
+    const tree = createTree(args.projectRoot);
     if (await exists(tree.metaRoot))
         fatal(".seeglue folder already exists");
 

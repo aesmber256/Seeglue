@@ -2,21 +2,23 @@ import { resolve } from "@std/path";
 import { fatal } from "./main.ts";
 import { parseArgs } from "@std/cli/parse-args";
 
-export type CliAction = "init" | "build" | "clean" | "gen_clangd" | "hello" | "help";
+export type CliAction = "init" | "build" | "clean" | "gen_clangd" | "hello" | "help" | "tool-delete";
 export type CliVerbosity = "quiet" | "normal" | "verbose";
 
 export type CliArgs = {
     action: CliAction,
-    root: string,
+    projectRoot: string,
+    toolRoot: string,
     verbose: CliVerbosity,
     dryRun: boolean,
 };
 
 export function parseCli(): CliArgs {
     if (Deno.args.length === 0)
-        return { action: "build", root: Deno.cwd(), verbose: "normal", dryRun: false }
+        return { action: "build", toolRoot: import.meta.dirname!, projectRoot: Deno.cwd(), verbose: "normal", dryRun: false }
     
     let action: CliAction;
+    let idx = 1;
     switch (Deno.args[0]) {
         case "init":
         case "i":
@@ -45,13 +47,29 @@ export function parseCli(): CliArgs {
         case "clangd":
             action = "gen_clangd";
             break;
+
+        case "tool":
+            if (Deno.args.length < 2)
+                fatal("Expected a sub command");
+            idx = 2;
+
+            switch (Deno.args[1]) {
+                case "delete":
+                    action = "tool-delete";
+                    break;
+            
+                default:
+                    fatal("Unrecognized subcommand", Deno.args[1]);
+                    break;
+            }
+            break;
         
         default:
             fatal("Unrecognized subcommand", Deno.args[0]);
             break;
     }
 
-    const args = parseArgs(Deno.args.slice(1), {
+    const args = parseArgs(Deno.args.slice(idx), {
         string: ["root"],
         boolean: ["verbose", "quiet", "dry-run"],
         alias: { v: "verbose", q: "quiet" },
@@ -64,7 +82,8 @@ export function parseCli(): CliArgs {
 
     return {
         action: action!,
-        root: resolve(Deno.cwd(), args.root ?? Deno.cwd()),
+        projectRoot: resolve(Deno.cwd(), args.root ?? Deno.cwd()),
+        toolRoot: import.meta.dirname!,
         verbose: args.verbose
             ? "verbose"
             : args.quiet

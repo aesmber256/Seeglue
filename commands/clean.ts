@@ -5,10 +5,10 @@ import { createTree } from "../util.ts";
 import { defaultBuildEnv, invokeBuildFunction } from "./build.ts";
 
 export default async function(args: CliArgs) {
-    const tree = createTree(args.root);
+    const tree = createTree(args.projectRoot);
 
     const customCache = (await readJsonOrDefault<GlobalCache | null>(tree.cacheFile, null))?.custom ?? Object.create(null);
-    const buildEnv = defaultBuildEnv(args.root, args.dryRun, customCache);
+    const buildEnv = defaultBuildEnv(tree.root, args.dryRun, customCache);
 
     await invokeBuildFunction(tree.buildFile, "clean", buildEnv);
 

@@ -5,6 +5,7 @@ import clean from "./commands/clean.ts";
 import init from "./commands/init.ts";
 import help from "./commands/help.ts";
 import { formatMicros } from "./util.ts";
+import _delete from "./commands/tool/delete.ts";
 
 export function fatal(...args: unknown[]) {
     console.error(...args);
@@ -65,6 +66,10 @@ if (import.meta.main) {
         
         case "gen_clangd":
             throw new TypeError("Not impl");
+
+        case "tool-delete":
+            _delete(params);
+            break;
 
         default:
             throw new TypeError("Invalid build action after parseCli()");
