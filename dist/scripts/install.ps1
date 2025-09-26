@@ -1,9 +1,12 @@
-# Resolve script directory
+# Exit script on any error
+$ErrorActionPreference = "Stop"
+
+# Resolve current directory
 $CurrentDir = (Get-Location).Path
 
-# --- Step 0: Clone or update the GitHub repo ---
-$RepoUrl = "https://github.com/aesmber256/Seeglue.git"   # <-- Replace with your repo
-$RepoDir = Join-Path $CurrentDir "seeglue"                # Clone here
+# Resolve and clone repo directory
+$RepoUrl = "https://github.com/aesmber256/Seeglue.git"
+$RepoDir = Join-Path $CurrentDir "seeglue"
 
 if (-not (Test-Path $RepoDir)) {
     Write-Host "Cloning repository from $RepoUrl..."
@@ -26,7 +29,7 @@ foreach ($dir in @($DenoDir, $BinDir)) {
     }
 }
 
-# --- Step 1: Download Deno binary ---
+# Download deno binary
 $DenoUrl = "https://github.com/denoland/deno/releases/download/v2.5.2/deno-x86_64-pc-windows-msvc.zip"
 $DenoZip = Join-Path $DenoDir "deno.zip"
 
@@ -38,14 +41,13 @@ Write-Host "Extracting Deno..."
 Expand-Archive -LiteralPath $DenoZip -DestinationPath $DenoDir -Force
 Remove-Item $DenoZip
 
-# --- Step 2: Move seeglue.cmd into ../bin ---
+# Move shim to bin
 $SourceCmd = Join-Path $ScriptDir "seeglue.cmd"
 $TargetCmd = Join-Path $BinDir "seeglue.cmd"
 
 Write-Host "Moving seeglue.cmd to $BinDir"
 Move-Item -Path $SourceCmd -Destination $TargetCmd -Force
 
-# --- Step 3: Add ../bin to user PATH ---
 # Expand to absolute path
 $BinFullPath = (Resolve-Path $BinDir).Path
 

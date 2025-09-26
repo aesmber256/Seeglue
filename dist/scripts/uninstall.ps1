@@ -1,3 +1,6 @@
+# Exit script on any error
+$ErrorActionPreference = "Stop"
+
 # Resolve script directory
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 
@@ -7,7 +10,7 @@ $RootDir = Resolve-Path $RootDir
 
 Write-Host "Root directory detected at $RootDir"
 
-# --- Step 1: Remove the root directory ---
+# Remove the directory
 if (Test-Path $RootDir) {
     Write-Host "Removing root directory $RootDir..."
     try {
@@ -21,7 +24,7 @@ if (Test-Path $RootDir) {
 }
 
 
-# --- Step 2: Remove ../bin from user PATH ---
+# Remove from PATH
 $BinDir = Join-Path $RootDir "dist\bin"
 $BinFullPath = $BinDir
 
