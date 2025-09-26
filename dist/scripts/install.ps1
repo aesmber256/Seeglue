@@ -1,5 +1,5 @@
 # Resolve script directory
-$CurrentDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
+$CurrentDir = (Get-Location).Path
 
 # --- Step 0: Clone or update the GitHub repo ---
 $RepoUrl = "https://github.com/aesmber256/Seeglue.git"   # <-- Replace with your repo
