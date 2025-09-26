@@ -1,3 +1,4 @@
+/// <reference path="seeglue.d.ts" />
 const outfile = "bin/out.exe";
 
 export default {
