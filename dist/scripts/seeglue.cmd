@@ -12,4 +12,4 @@ REM Path to main.ts
 set MAIN_TS=%ROOT_DIR%main.ts
 
 REM Call local Deno binary and forward all arguments
-"%DENO_EXE%" run --unstable-raw-imports --allow-read --allow-write "%MAIN_TS%" %*
+"%DENO_EXE%" run --unstable-raw-imports --allow-read --allow-run --allow-write "%MAIN_TS%" %*

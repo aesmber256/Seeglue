@@ -1,4 +1,4 @@
 *
 !.gitignore
 !build.ts
-!lib.d.ts
+!seeglue.d.ts
