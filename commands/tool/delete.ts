@@ -5,8 +5,14 @@ export default function(args: CliArgs) {
     let cmd: Deno.Command;
     switch (Deno.build.os) {
         case "windows":
-            cmd = new Deno.Command("powershell.exe", {
-                args: ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", resolve(args.toolRoot, "dist/scripts/uninstall.ps1")],
+            cmd = new Deno.Command("cmd.exe", {
+                args: [
+                    "/c",
+                    "start",
+                    "powershell.exe",
+                    "-NoProfile", 
+                    "-ExecutionPolicy", "Bypass", 
+                    "-File", resolve(args.toolRoot, "dist/scripts/uninstall.ps1")],
                 stdin: "null",
                 stdout: "null",
                 stderr: "null",

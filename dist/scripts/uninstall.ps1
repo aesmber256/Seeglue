@@ -1,6 +1,9 @@
 # Exit script on any error
 $ErrorActionPreference = "Stop"
 
+# Idk i was told this is a good thing
+Set-Location $env:TEMP
+
 # Resolve script directory
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 
