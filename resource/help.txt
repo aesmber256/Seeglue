@@ -1,0 +1,41 @@
+  █████████                             ████
+ ███▒▒▒▒▒███                           ▒▒███
+▒███    ▒▒▒   ██████   ██████   ███████ ▒███  █████ ████  ██████
+▒▒█████████  ███▒▒███ ███▒▒███ ███▒▒███ ▒███ ▒▒███ ▒███  ███▒▒███
+ ▒▒▒▒▒▒▒▒███▒███████ ▒███████ ▒███ ▒███ ▒███  ▒███ ▒███ ▒███████
+ ███    ▒███▒███▒▒▒  ▒███▒▒▒  ▒███ ▒███ ▒███  ▒███ ▒███ ▒███▒▒▒
+▒▒█████████ ▒▒██████ ▒▒██████ ▒▒███████ █████ ▒▒████████▒▒██████
+ ▒▒▒▒▒▒▒▒▒   ▒▒▒▒▒▒   ▒▒▒▒▒▒   ▒▒▒▒▒███▒▒▒▒▒   ▒▒▒▒▒▒▒▒  ▒▒▒▒▒▒
+                               ███ ▒███
+                              ▒▒██████
+                               ▒▒▒▒▒▒
+
+                       Made by: A(ES)mber-256
+
+%3Commands:%0
+    %1h%0, %1help%0      %2Show this help message%0
+    %1i%0, %1init%0      %2Initialize Seeglue in project%0
+    %1b%0, %1build%0     %2Build the project%0
+    %1c%0, %1clean%0     %2Remove generated files%0
+    %1clangd%0       %2Generates a .clangd file%0
+    %1hello%0        %2Secret :3%0
+
+%3Global options:%0
+    %4--root=<path>%5
+        Specifies the project root, if unspecified
+        assumes current working directory
+
+    %4--verbose%0 [%4-v%0]%5
+        Outputs extra information to stdout
+
+    %4--quiet%0 [%4-q%0]%5
+        Outputs no information to stdout
+
+    %4--dry%0 [%4-d%0]%5
+        Invokes command but produces no side effects
+
+%3Usage:%6
+    %6seeglue <command> [options]
+
+%3Example:%6
+    seeglue build --root=/home/amber/repo/doom/ --quiet%0

@@ -1,0 +1,27 @@
+const outfile = "bin/out.exe";
+
+export default {
+    async build(b: Seeglue.BuildEnv) {
+        b.compiler = "gcc";
+        b.standard = "c11";
+        b.output = outfile;
+        b.outputKind = "app";
+
+        const unit: Seeglue.CompileUnit = {
+            input: new Set()
+        };
+
+        for await (const file of b.fs.globFiles("src/**/*.c")) {
+            unit.input.add(file);
+        }
+
+        b.compile.units.add(unit);
+    },
+
+    async clean(b: Seeglue.BuildEnv) {
+        if (b.isDryRun)
+            return;
+
+        await b.fs.rm(outfile);
+    }
+} satisfies Seeglue.BuildScript

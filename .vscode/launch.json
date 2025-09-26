@@ -9,7 +9,7 @@
             "name": "Launch Program",
             "type": "node",
             "program": "${workspaceFolder}/main.ts",
-            "cwd": "${workspaceFolder}/test_project",
+            "cwd": "${workspaceFolder}",
             "env": {},
             "runtimeExecutable": "deno",
             "runtimeArgs": [
@@ -17,6 +17,10 @@
                 "--inspect-wait",
                 "--unstable-raw-imports",
                 "--allow-all",
+            ],
+            "args": [
+                "b",
+                "--root=./test_project"
             ],
             "attachSimplePort": 9229
         }

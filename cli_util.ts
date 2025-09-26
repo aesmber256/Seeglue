@@ -1,8 +1,8 @@
-import { resolve, dirname } from "@std/path";
+import { resolve } from "@std/path";
 import { fatal } from "./main.ts";
 import { parseArgs } from "@std/cli/parse-args";
 
-export type CliAction = "init" | "build" | "clean" | "gen_clangd";
+export type CliAction = "init" | "build" | "clean" | "gen_clangd" | "hello" | "help";
 export type CliVerbosity = "quiet" | "normal" | "verbose";
 
 export type CliArgs = {
@@ -32,6 +32,15 @@ export function parseCli(): CliArgs {
         case "c":
             action = "clean";
             break;
+
+        case "help":
+        case "h":
+            action = "help";
+            break;
+
+        case "hello":
+            action = "hello";
+            break;
         
         case "clangd":
             action = "gen_clangd";
@@ -43,6 +52,7 @@ export function parseCli(): CliArgs {
     }
 
     const args = parseArgs(Deno.args.slice(1), {
+        string: ["root"],
         boolean: ["verbose", "quiet", "dry-run"],
         alias: { v: "verbose", q: "quiet" },
     });
@@ -54,7 +64,7 @@ export function parseCli(): CliArgs {
 
     return {
         action: action!,
-        root: args._[0].toString() ?? Deno.cwd(),
+        root: resolve(Deno.cwd(), args.root ?? Deno.cwd()),
         verbose: args.verbose
             ? "verbose"
             : args.quiet
