@@ -83,3 +83,29 @@ export function formatMicros(micros: number): string {
 
   return parts.join(" ");
 }
+
+export function spawnPowershellScript(file: string, ...args: string[]) {
+    let cmd: Deno.Command;
+    switch (Deno.build.os) {
+        case "windows":
+            cmd = new Deno.Command("cmd.exe", {
+                args: [
+                    "/c",
+                    "start",
+                    "powershell.exe",
+                    "-NoProfile", 
+                    "-ExecutionPolicy", "Bypass", 
+                    "-File", file,
+                    ...args
+                ],
+                stdin: "null",
+                stdout: "null",
+                stderr: "null",
+            });
+            break;
+            
+        default:
+            throw new TypeError("Unsupported os");
+    }
+    cmd.spawn().unref();
+}

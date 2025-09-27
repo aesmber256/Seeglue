@@ -44,6 +44,13 @@ export function defaultBuildEnv(root: string, isDryRun: boolean, cache: Record<s
         cache: cache,
         isDryRun: isDryRun,
         
+        sysInfo: {
+            arch: Deno.build.arch,
+            os: Deno.build.os,
+            vendor: Deno.build.vendor,
+            target: Deno.build.target
+        },
+        
         shell: libf.shell,
         
         fs: {

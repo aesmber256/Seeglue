@@ -20,6 +20,8 @@ export async function shell(exec: string, args?: string[]): Promise<Seeglue.Shel
     const result = await new Deno.Command(exec, {
         args: args
     }).output();
+
+    Deno.build
     
     return {
         signal: result.signal,

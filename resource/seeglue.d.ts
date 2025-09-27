@@ -6,7 +6,7 @@ declare namespace Seeglue {
     /** Indicates a toolchain */
     type CCEnum = "gcc" | "clang"| "custom";
     
-    /** Indicates the type of fragment */
+    /** Indicates the type of a resulting binary */
     type OutputType = "app" | "sharedlib" | "staticlib";
     
     /** Posix process signals */
@@ -19,7 +19,7 @@ declare namespace Seeglue {
         | "SIGUSR1" | "SIGUSR2" | "SIGVTALRM" | "SIGWINCH"  | "SIGXCPU" | "SIGXFSZ";
     
     /**
-     * Represents the result of invoke a shell command
+     * Represents the result of a shell command invocation
      */
     type ShellResult = {
         /** The exit code of the invocation */
@@ -37,9 +37,6 @@ declare namespace Seeglue {
         /** The standard error */
         readonly stderr: Uint8Array<ArrayBuffer>;
     }
-    
-    /** The default build function which is invoke by Seeglue */
-    type BuildFunc = (b: BuildEnv) => PromiseLike<void> | void;
     
     /** Merging strategy for flags */
     type FlagMergeStyle = "before" | "after" | "override";
@@ -124,7 +121,34 @@ declare namespace Seeglue {
         mergeStyle: FlagMergeStyle;
     }
 
-    /** Indicates a file system object */
+    /** Information about the current system */
+    type SysInfo = {
+        /** The [LLVM](https://llvm.org/) target triple, which is the combination
+        * of `${arch}-${vendor}-${os}` and represent the specific build target that
+        * the current runtime was built for. */
+        target: string;
+        
+        /** The computer vendor that the Deno CLI was built for. */
+        vendor: string;
+
+        /** Instruction set architecture that the Deno CLI was built for. */
+        arch: "x86_64" | "aarch64";
+
+        /** The operating system that the Deno CLI was built for. `"darwin"` is
+        * also known as OSX or MacOS. */
+        os:
+            | "darwin"
+            | "linux"
+            | "android"
+            | "windows"
+            | "freebsd"
+            | "netbsd"
+            | "aix"
+            | "solaris"
+            | "illumos";
+    };
+
+    /** Indicates a file system object's kind */
     type FileKind = {
         isFile?: boolean,
         isDirectory?: boolean
@@ -211,6 +235,7 @@ declare namespace Seeglue {
         isSocket: boolean | null;
     }
     
+    /** Union of types from which can binary data be read from */
     type BinaryData = Uint8Array | ReadableStream<Uint8Array>;
 
     type FileSystem = {
@@ -288,10 +313,27 @@ declare namespace Seeglue {
         /** Contains functions to interact with the file system */
         readonly fs: FileSystem;
 
+        /** Contains information about current system */
+        readonly sysInfo: SysInfo;
+
         /** Invokes a shell command and returns its result */
         shell(exec: string, args?: string[]): Promise<ShellResult>;
     }
 
+    /** The default build function which is invoke by Seeglue */
+    type BuildFunc = (b: BuildEnv) => PromiseLike<void> | void;
+
+    /** 
+     * The object required to be exported for a build script to function correctly 
+     * 
+     * @example
+     * ```ts
+     *  export default {
+          async build(b: Seeglue.BuildEnv) {},
+          async clean(b: Seeglue.BuildEnv) {}
+     *  } satisfies Seeglue.BuildScript
+     * ```
+     */
     type BuildScript = {
         build: (b: BuildEnv) => PromiseLike<void> | void,
         clean: (b: BuildEnv) => PromiseLike<void> | void,

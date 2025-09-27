@@ -5,13 +5,12 @@ import { spawnPowershellScript } from "../../util.ts";
 export default function(args: CliArgs) {    
     switch (Deno.build.os) {
         case "windows":
-            spawnPowershellScript(resolve(args.toolRoot, "dist/scripts/uninstall.ps1"));
+            throw new TypeError("Not impl");
+            spawnPowershellScript(resolve(args.toolRoot, "dist/scripts/update.ps1"));
             break;
     
         default:
             throw new TypeError("Unsupported os");
     }
-
-    console.log("Goodbye :(");
     Deno.exit(0);
 }
