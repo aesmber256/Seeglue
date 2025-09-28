@@ -1,4 +1,5 @@
 /// <reference path="seeglue.d.ts" />
+/// <reference path="deno.d.ts" />
 export default {
     async build(b: Seeglue.BuildEnv) {
         b.compiler = "gcc";

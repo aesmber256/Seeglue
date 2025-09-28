@@ -25,6 +25,9 @@ export type GlobalCache = {
 export type DirTree = {
     // The project root
     readonly root: string,
+
+    // The seeglue tool's root
+    readonly toolRoot: string
     
     // The .seeglue folder
     readonly metaRoot: string,

@@ -33,10 +33,14 @@ export function createTree(root: string): DirTree {
     
     // Get the cache
     const cacheFile = resolve(metaRoot, "cache.json");
+
+    if (!import.meta.dirname)
+        throw new TypeError("import.meta.dirname is null");
     
     // Return the three structure
     return {
         root: root,
+        toolRoot: import.meta.dirname,
         metaRoot: metaRoot,
         buildFile: buildFile,
         cacheFile: cacheFile,

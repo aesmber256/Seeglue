@@ -1,6 +1,6 @@
 import { resolve } from "@std/path/resolve";
 import { CliArgs } from "../cli_util.ts";
-import { stat } from "../fs_util.ts";
+import * as fs from "../fs_util.ts";
 import { compileFatal, fatal } from "../main.ts";
 import { createTree, getOrCreateGlobalCache } from "../util.ts";
 import { ensureDir } from "@std/fs/ensure-dir";
@@ -54,19 +54,19 @@ export function defaultBuildEnv(root: string, isDryRun: boolean, cache: Record<s
         shell: libf.shell,
         
         fs: {
-           glob: libf.glob.bind(undefined, root),
-           globFiles: libf.globFiles.bind(undefined, root),
-           writeText: libf.writeText,
-           writeBin: libf.writeBin,
-           readText: libf.readText,
-           readBin: libf.readBin,
-           appendText: libf.appendText,
-           appendBin: libf.appendBin,
-           exists: libf.exists,
-           mkdir: libf.mkdir,
-           mkfile: libf.mkfile,
-           rm: libf.rm,
-           stat: libf.stat
+           glob: fs.glob.bind(undefined, root),
+           globFiles: fs.globFiles.bind(undefined, root),
+           writeText: fs.writeText,
+           writeBin: fs.writeBin,
+           readText: fs.readText,
+           readBin: fs.readBin,
+           appendText: fs.appendText,
+           appendBin: fs.appendBin,
+           exists: fs.exists,
+           mkdir: fs.mkdir,
+           mkfile: fs.mkfile,
+           rm: fs.rm,
+           stat: fs.stat
         }
     };
 }
@@ -147,7 +147,7 @@ export default async function(args: CliArgs) {
     const { root, buildFile, buildFolder, cacheFile } = tree;
     
     // Check if build file exists (and by extension, .seeglue)
-    const buildFileStat = await stat(buildFile);
+    const buildFileStat = await fs.stat(buildFile);
     if (buildFileStat === null) {
         fatal("Build file does not exist", buildFile);
     }
@@ -205,7 +205,7 @@ export default async function(args: CliArgs) {
         const freshFiles: SourceFileEntry[] = [];
         for (const file of unit.input) {
             const cachePath = relative(common([root, file]), file).replaceAll("\\", "/");
-            const fileStat = await stat(file);
+            const fileStat = await fs.stat(file);
             
             if (fileStat === null) {
                 notFound.push(file);
