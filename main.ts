@@ -18,6 +18,7 @@ export function compileFatal() {
 }
 
 export type GlobalCache = {
+    buildFileMtime: number,
     object: Record<string, number>,
     custom: Record<string, number>    
 }

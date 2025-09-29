@@ -81,7 +81,7 @@ declare namespace Seeglue {
         readonly includes?: Set<string>;
         
         /** Actual flags to pass along */
-        readonly args?: string[];
+        readonly flags?: string[];
         
         /** How to merge this unit's flags and common flags */
         readonly flagsMergeStyle?: FlagMergeStyle;
@@ -115,7 +115,7 @@ declare namespace Seeglue {
      */
     type LinkFlags = {
         /** Flags which are passed to the linker */
-        readonly args: string[];
+        args: string[];
 
         /** How to merge this configuration's flags with the common flags specified by the toolchain */
         mergeStyle: FlagMergeStyle;

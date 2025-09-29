@@ -37,15 +37,15 @@ async function compile(type: CCType, colorFlag: string, t: DirTree, b: Seeglue.B
     let flags: string[];
     switch (u.flagsMergeStyle || "after") {
         case "after":
-            flags = [...b.compile.commonFlags, ...(u.args ?? [])];
+            flags = [...b.compile.commonFlags, ...(u.flags ?? [])];
             break;
 
         case "before":
-            flags = [...(u.args ?? []), ...b.compile.commonFlags];
+            flags = [...(u.flags ?? []), ...b.compile.commonFlags];
             break;
 
         case "override":
-            flags = u.args ?? [];
+            flags = u.flags ?? [];
             break;
 
         default:
@@ -77,17 +77,18 @@ async function compile(type: CCType, colorFlag: string, t: DirTree, b: Seeglue.B
     await scheduleChunk(navigator.hardwareConcurrency, 1, i, async function(chunk) {
         const file = chunk[0];
         const output = resolve(t.buildFolder, file.cachePath + ".o");
+        const args = [
+            ...buildEnvFlags,
+            ...includes,
+            ...flags,
+            "-c", file.file,
+            "-o", output,
+            colorFlag
+        ];
 
         await ensureFile(output);
         const result = await new Deno.Command(compiler, {
-            args: [
-                ...buildEnvFlags,
-                ...includes,
-                ...flags,
-                "-c", file.file,
-                "-o", output,
-                colorFlag
-            ]
+            args: args
         }).output();
 
         results.set(file, {
@@ -167,7 +168,7 @@ async function link(type: CCType, colorFlag: string, _: DirTree, b: Seeglue.Buil
         ...b.link.flags.args,
         "-o", b.output!,
         colorFlag
-    );       
+    );
 
     const result = await new Deno.Command(compiler, { args: args }).output();
     return {

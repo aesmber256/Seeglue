@@ -190,6 +190,10 @@ export default async function(args: CliArgs) {
     // TODO: Parallelize?
     // Compile the source files
     log.group("*** %cRunning compiler%c ***", HEADER, RESET);
+    
+    const buildFileMtime = buildFileStat!.mtime!.getTime();
+    const rebuildAll = buildFileMtime > globalCache.buildFileMtime;
+
     for (const unit of buildEnv.compile.units) {
         // Find files that require compilation to objects
         const freshFiles: SourceFileEntry[] = [];
@@ -208,7 +212,7 @@ export default async function(args: CliArgs) {
             const mtime = fileStat!.mtime!.getTime();
             
             // File is in cache and up to date, keep it
-            if (cachePath in objCache && mtime <= objCache[cachePath]) {
+            if (!rebuildAll && cachePath in objCache && mtime <= objCache[cachePath]) {
                 updatedObjCache[cachePath] = mtime;
                 continue;
             }
@@ -311,6 +315,8 @@ export default async function(args: CliArgs) {
 
     if (!linkFailed) {
         log.log(`*** %cLinked executable %c${resolve(root, buildEnv.output!)}%c ***`, SUCCESS, WHITE, RESET);
+        globalCache.buildFileMtime = buildFileMtime;
+        await Deno.writeTextFile(cacheFile, JSON.stringify(globalCache));
     }
     else {
         log.error(`*** %cLinker failed%c ***`, ERROR, RESET)

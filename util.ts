@@ -49,7 +49,11 @@ export function createTree(root: string): DirTree {
 }
 
 export async function getOrCreateGlobalCache(file: string) {
-    return await readJsonOrCreate<GlobalCache>(file, { object: Object.create(null), custom: Object.create(null) });
+    return await readJsonOrCreate(file, { 
+        buildFileMtime: -1, 
+        object: Object.create(null), 
+        custom: Object.create(null) 
+    });
 }
 
 export function formatMicros(micros: number): string {
