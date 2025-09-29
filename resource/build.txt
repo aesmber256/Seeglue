@@ -1,27 +1,27 @@
 /// <reference path="seeglue.d.ts" />
 /// <reference path="deno.d.ts" />
-export default {
-    async build(b: Seeglue.BuildEnv) {
-        b.compiler = "gcc";
-        b.standard = "c11";
-        b.output = "bin/out.exe";
-        b.outputKind = "app";
+export default { build: build, clean: clean } satisfies Seeglue.BuildScript
 
-        const unit: Seeglue.CompileUnit = {
-            input: new Set()
-        };
+async function build(b: Seeglue.BuildEnv) {
+    b.compiler = "gcc";
+    b.standard = "c11";
+    b.output = "bin/out.exe";
+    b.outputKind = "app";
 
-        for await (const file of b.fs.globFiles("src/**/*.c")) {
-            unit.input.add(file);
-        }
+    const unit: Seeglue.CompileUnit = {
+        input: new Set()
+    };
 
-        b.compile.units.add(unit);
-    },
-
-    async clean(b: Seeglue.BuildEnv) {
-        if (b.isDryRun)
-            return;
-
-        await b.fs.rm("bin");
+    for await (const file of b.fs.globFiles("src/**/*.c")) {
+        unit.input.add(file);
     }
-} satisfies Seeglue.BuildScript
+
+    b.compile.units.add(unit);
+}
+
+async function clean(b: Seeglue.BuildEnv) {
+    if (b.isDryRun)
+        return;
+
+    await b.fs.rm("bin");
+}
