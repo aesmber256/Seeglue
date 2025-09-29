@@ -4,7 +4,7 @@ declare namespace Seeglue {
     type CStandardEnum = 'c89' | 'c90' | 'c99' | 'c11' | 'c17' | 'c18' | 'c23' | (`c${string}` & {});
 
     /** Indicates a toolchain */
-    type CCEnum = "gcc" | "clang"| "custom";
+    type CCEnum = "gcc" | "clang";
     
     /** Indicates the type of a resulting binary */
     type OutputType = "app" | "sharedlib" | "staticlib";

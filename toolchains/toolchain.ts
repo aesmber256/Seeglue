@@ -1,5 +1,5 @@
 import { type DirTree } from "../main.ts";
-import gcc from "./gcc.ts";
+import _gcc_clang_shared from "./_gcc_clang_shared.ts";
 
 export type SourceFileEntry = {
     file: string;
@@ -23,9 +23,5 @@ export type Toolchain = {
     link(tree: DirTree, env: Seeglue.BuildEnv, input: string[]): Promise<LinkOutput>;
 }
 
-export function custom(_compilerPath: string): Toolchain {
-    throw new TypeError("Not impl");
-}
-
-export const GCC: Toolchain = gcc;
-export const CLANG: Toolchain = gcc;
+export const GCC: Toolchain = _gcc_clang_shared("gcc");
+export const CLANG: Toolchain = _gcc_clang_shared("clang");

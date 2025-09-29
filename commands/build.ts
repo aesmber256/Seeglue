@@ -10,7 +10,7 @@ import { common } from "@std/path/common";
 import { dirname } from "@std/path/dirname";
 import { relative } from "@std/path/relative";
 import { HEADER, RESET, SUCCESS, ERROR, WHITE } from "../colors.ts";
-import { Toolchain, GCC, CLANG, SourceFileEntry, CompileOutput, custom as customToolchain } from "../toolchains/toolchain.ts";
+import { Toolchain, GCC, CLANG, SourceFileEntry, CompileOutput } from "../toolchains/toolchain.ts";
 import { normal as log } from "../log.ts";
 
 export type BuildScriptResult = {
@@ -96,16 +96,6 @@ export async function invokeBuildFunction(scriptFile: string, func: BuildFunctio
         
         case "clang":
             result.toolchain = CLANG;
-            break;
-        
-        case "custom":
-            if (!buildEnv.compilerPath)
-            {
-                result.error = "No compiler path specified";
-                return result;
-            }
-            
-            result.toolchain = customToolchain(buildEnv.compilerPath!);
             break;
         
         case null:

@@ -4,10 +4,32 @@ import { resolve } from "@std/path";
 import { ensureFile } from "@std/fs";
 import { scheduleChunk } from "../util.ts";
 
-async function compile(t: DirTree, b: Seeglue.BuildEnv, i: SourceFileEntry[], u: Seeglue.CompileUnit): Promise<Map<SourceFileEntry, CompileOutput>> {
-    if (b.compiler !== "gcc")
-        throw new TypeError("expected gcc compiler");
-    const compiler = b.compilerPath || "gcc";
+type CCType = "gcc" | "clang";
+
+export default function(type: CCType): Toolchain {
+    let colorFlag: string;
+    switch (type) {
+        case "gcc":
+            colorFlag = "-fdiagnostics-color=always";
+            break;
+
+        case "clang":
+            colorFlag = "-fdiagnostics-color";
+            break;
+    
+        default:
+            throw new TypeError("Unexpected compiler type");
+    }
+    return {
+        compile: (...args) => compile(type, colorFlag, ...args),
+        link: (...args) => link(type, colorFlag, ...args)
+    };
+}
+
+async function compile(type: CCType, colorFlag: string, t: DirTree, b: Seeglue.BuildEnv, i: SourceFileEntry[], u: Seeglue.CompileUnit): Promise<Map<SourceFileEntry, CompileOutput>> {
+    if (b.compiler !== type)
+        throw new TypeError(`expected ${type} compiler`);
+    const compiler = b.compilerPath || type;
 
     // Put the standard into the flags
     b.compile.commonFlags.push(`-std=${b.standard}`);
@@ -64,7 +86,7 @@ async function compile(t: DirTree, b: Seeglue.BuildEnv, i: SourceFileEntry[], u:
                 ...flags,
                 "-c", file.file,
                 "-o", output,
-                "-fdiagnostics-color=always"
+                colorFlag
             ]
         }).output();
 
@@ -117,10 +139,10 @@ async function compile(t: DirTree, b: Seeglue.BuildEnv, i: SourceFileEntry[], u:
     =================================================================================*/
 }
 
-async function link(_: DirTree, b: Seeglue.BuildEnv, f: string[]): Promise<LinkOutput> {
-    if (b.compiler !== "gcc")
-        throw new TypeError("expected gcc compiler");
-    const compiler = b.compilerPath || "gcc";
+async function link(type: CCType, colorFlag: string, _: DirTree, b: Seeglue.BuildEnv, f: string[]): Promise<LinkOutput> {
+    if (b.compiler !== type)
+        throw new TypeError(`expected ${type} compiler`);
+    const compiler = b.compilerPath || type;
 
     const buildEnvFlags: string[] = [];
     if (b.outputKind === "sharedlib") {
@@ -144,7 +166,7 @@ async function link(_: DirTree, b: Seeglue.BuildEnv, f: string[]): Promise<LinkO
     args.push(
         ...b.link.flags.args,
         "-o", b.output!,
-        "-fdiagnostics-color=always"
+        colorFlag
     );       
 
     const result = await new Deno.Command(compiler, { args: args }).output();
@@ -153,8 +175,3 @@ async function link(_: DirTree, b: Seeglue.BuildEnv, f: string[]): Promise<LinkO
         shell: result,
     };
 }
-
-export default {
-    compile: compile,
-    link: link,
-} satisfies Toolchain
